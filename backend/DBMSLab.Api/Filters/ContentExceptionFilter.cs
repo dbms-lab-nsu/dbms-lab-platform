@@ -5,8 +5,16 @@ using Npgsql;
 
 namespace DBMSLab.Api.Filters;
 
+/// <summary>Converts failures from content controllers into ProblemDetails without exposing server exception details.</summary>
+/// <param name="logger">Records server failures with their request trace identifiers.</param>
 public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logger) : IExceptionFilter
 {
+    /// <summary>Maps missing content to 404, transient database failures to 503, and other failures to 500.</summary>
+    /// <param name="context">The failed MVC action and the HTTP response to populate.</param>
+    /// <remarks>
+    /// Logs only server failures and adds a trace identifier to handled responses.
+    /// Leaves OperationCanceledException unhandled when the request has been aborted.
+    /// </remarks>
     public void OnException(ExceptionContext context)
     {
         var httpContext = context.HttpContext;
@@ -51,6 +59,9 @@ public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logge
         context.ExceptionHandled = true;
     }
 
+    /// <summary>Finds transient Npgsql failures or timeouts, including those wrapped by EF Core.</summary>
+    /// <param name="exception">The exception at the outermost level of the failure.</param>
+    /// <returns>Whether any exception in the inner-exception chain indicates temporary unavailability.</returns>
     private static bool IsDatabaseUnavailable(Exception exception)
     {
         // EF Core can wrap a transient Npgsql error in InvalidOperationException.

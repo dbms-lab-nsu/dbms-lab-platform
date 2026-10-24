@@ -5,11 +5,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DBMSLab.Api.Repositories.Persistence;
 
+/// <summary>Projects PostgreSQL course data into read models using EF Core without entity tracking.</summary>
+/// <param name="db">The scoped context used to execute content queries.</param>
+/// <remarks>Publication checks by identifier belong to the service; this repository returns stored state.</remarks>
 public sealed class CourseRepository(AppDbContext db) : ICourseRepository
 {
+    /// <inheritdoc />
     public Task<int> CountCoursesAsync(CourseStatus status, CancellationToken cancellationToken) =>
         db.Courses.CountAsync(course => course.Status == status, cancellationToken);
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<CourseReadModel>> GetCoursesAsync(
         CourseStatus status, int offset, int limit, CancellationToken cancellationToken) =>
         await db.Courses.AsNoTracking()
@@ -22,6 +27,7 @@ public sealed class CourseRepository(AppDbContext db) : ICourseRepository
                 course.Id, course.Title, course.Description, course.Status))
             .ToListAsync(cancellationToken);
 
+    /// <inheritdoc />
     public Task<CourseReadModel?> GetCourseAsync(Guid id, CancellationToken cancellationToken) =>
         db.Courses.AsNoTracking()
             .Where(course => course.Id == id)
@@ -29,6 +35,7 @@ public sealed class CourseRepository(AppDbContext db) : ICourseRepository
                 course.Id, course.Title, course.Description, course.Status))
             .SingleOrDefaultAsync(cancellationToken);
 
+    /// <inheritdoc />
     public Task<CourseStructureReadModel?> GetStructureAsync(Guid id, CancellationToken cancellationToken) =>
         db.Courses.AsNoTracking()
             .Where(course => course.Id == id)
@@ -59,6 +66,7 @@ public sealed class CourseRepository(AppDbContext db) : ICourseRepository
                     .ToList()))
             .SingleOrDefaultAsync(cancellationToken);
 
+    /// <inheritdoc />
     public Task<LessonReadModel?> GetLessonAsync(Guid id, CancellationToken cancellationToken) =>
         db.Lessons
             .AsNoTracking()
