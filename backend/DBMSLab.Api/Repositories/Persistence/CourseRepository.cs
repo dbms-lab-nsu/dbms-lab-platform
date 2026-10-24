@@ -7,7 +7,7 @@ namespace DBMSLab.Api.Repositories.Persistence;
 
 /// <summary>Projects PostgreSQL course data into read models using EF Core without entity tracking.</summary>
 /// <param name="db">The scoped context used to execute content queries.</param>
-/// <remarks>Publication checks by identifier belong to the service; this repository returns stored state.</remarks>
+/// <remarks>Visibility checks belong to the service; this repository returns stored state and ownership.</remarks>
 public sealed class CourseRepository(AppDbContext db) : ICourseRepository
 {
     /// <inheritdoc />
@@ -24,7 +24,7 @@ public sealed class CourseRepository(AppDbContext db) : ICourseRepository
             .Skip(offset)
             .Take(limit)
             .Select(course => new CourseReadModel(
-                course.Id, course.Title, course.Description, course.Status))
+                course.Id, course.Title, course.Description, course.Status, course.AuthorId))
             .ToListAsync(cancellationToken);
 
     /// <inheritdoc />
@@ -32,7 +32,7 @@ public sealed class CourseRepository(AppDbContext db) : ICourseRepository
         db.Courses.AsNoTracking()
             .Where(course => course.Id == id)
             .Select(course => new CourseReadModel(
-                course.Id, course.Title, course.Description, course.Status))
+                course.Id, course.Title, course.Description, course.Status, course.AuthorId))
             .SingleOrDefaultAsync(cancellationToken);
 
     /// <inheritdoc />
@@ -45,6 +45,7 @@ public sealed class CourseRepository(AppDbContext db) : ICourseRepository
                 course.Title,
                 course.Description,
                 course.Status,
+                course.AuthorId,
                 course.Modules.OrderBy(module => module.SortOrder)
                     .Select(module => new ModuleReadModel(
                         module.Id,
@@ -80,6 +81,7 @@ public sealed class CourseRepository(AppDbContext db) : ICourseRepository
                 lesson.SortOrder,
                 lesson.Content,
                 lesson.IsPublished,
-                lesson.Topic.Module.Course.Status))
+                lesson.Topic.Module.Course.Status,
+                lesson.Topic.Module.Course.AuthorId))
             .SingleOrDefaultAsync(cancellationToken);
 }

@@ -5,7 +5,7 @@ namespace DBMSLab.Api.Application.Content;
 /// <summary>Reads course and lesson projections for the content service.</summary>
 /// <remarks>
 /// Does not authorize callers or hide unpublished records returned by identifier.
-/// The service must check publication state before exposing a read model.
+/// The service must check publication state and preview permissions before exposing a read model.
 /// </remarks>
 public interface ICourseRepository
 {

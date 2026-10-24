@@ -25,16 +25,16 @@ public sealed record CourseCatalogDto(
     int PageSize,
     int TotalCount);
 
-/// <summary>Exposes a published course's title and description without its child elements.</summary>
+/// <summary>Exposes a visible course's title and description without its child elements.</summary>
 public sealed record CourseDto(Guid Id, string Title, string Description)
 {
     /// <summary>Gets the fixed element type <c>course</c>.</summary>
     public string Type => "course";
-    /// <summary>Gets <see langword="false"/> because course cards are publicly readable.</summary>
-    public bool RequiresAuthentication => false;
+    /// <summary>Gets whether the course is unpublished and requires authorized preview access.</summary>
+    public bool RequiresAuthentication { get; init; }
 }
 
-/// <summary>Exposes a published course's navigation tree with ordered modules, topics, and lesson summaries.</summary>
+/// <summary>Exposes a visible course's navigation tree with ordered modules, topics, and lesson summaries.</summary>
 /// <remarks>Lesson content is omitted, while empty modules and topics are retained.</remarks>
 public sealed record CourseStructureDto(
     Guid Id,
@@ -44,8 +44,8 @@ public sealed record CourseStructureDto(
 {
     /// <summary>Gets the fixed element type <c>course</c>.</summary>
     public string Type => "course";
-    /// <summary>Gets <see langword="false"/> because the navigation tree is publicly readable.</summary>
-    public bool RequiresAuthentication => false;
+    /// <summary>Gets whether this navigation tree belongs to an unpublished course.</summary>
+    public bool RequiresAuthentication { get; init; }
 }
 
 /// <summary>Exposes a module's description, sibling order, and topic collection.</summary>
@@ -58,25 +58,25 @@ public sealed record ModuleDto(
 {
     /// <summary>Gets the fixed element type <c>module</c>.</summary>
     public string Type => "module";
-    /// <summary>Gets <see langword="false"/> because module metadata is publicly readable.</summary>
-    public bool RequiresAuthentication => false;
+    /// <summary>Gets whether the parent course requires authorized preview access.</summary>
+    public bool RequiresAuthentication { get; init; }
 }
 
-/// <summary>Exposes a topic's description, sibling order, and published lesson summaries.</summary>
+/// <summary>Exposes a topic's description, sibling order, and lesson summaries visible to the caller.</summary>
 public sealed record TopicDto(
     Guid Id,
     string Title,
     string Description,
     int SortOrder,
-    IReadOnlyList<LessonSummaryDto> Lessons)
+    IReadOnlyList<LessonSummaryDto> Items)
 {
     /// <summary>Gets the fixed element type <c>topic</c>.</summary>
     public string Type => "topic";
-    /// <summary>Gets <see langword="false"/> because topic metadata is publicly readable.</summary>
-    public bool RequiresAuthentication => false;
+    /// <summary>Gets whether the parent course requires authorized preview access.</summary>
+    public bool RequiresAuthentication { get; init; }
 }
 
-/// <summary>Exposes a published lesson's identifier, title, and sibling order in the public tree.</summary>
+/// <summary>Exposes a visible lesson's identifier, title, and sibling order without its content.</summary>
 /// <remarks>The authentication requirement applies to reading lesson content, not this summary.</remarks>
 public sealed record LessonSummaryDto(Guid Id, string Title, int SortOrder)
 {
@@ -84,9 +84,13 @@ public sealed record LessonSummaryDto(Guid Id, string Title, int SortOrder)
     public string Type => "lesson";
     /// <summary>Gets <see langword="true"/> because the separate lesson content endpoint requires a JWT.</summary>
     public bool RequiresAuthentication => true;
+
+    /// <summary>Gets whether the current caller may read this lesson's content, including authorized previews.</summary>
+    /// <remarks>False for guests. Authentication alone does not grant access to unpublished content.</remarks>
+    public bool IsAccessible { get; init; }
 }
 
-/// <summary>Exposes a published lesson's content and the identifiers of its parent topic, module, and course.</summary>
+/// <summary>Exposes visible lesson content and the identifiers of its parent topic, module, and course.</summary>
 /// <remarks>Content is returned as stored; the API does not render or transform its markup.</remarks>
 public sealed record LessonDto(
     Guid Id,

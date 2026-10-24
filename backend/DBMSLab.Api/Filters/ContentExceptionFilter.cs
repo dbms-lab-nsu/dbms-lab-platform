@@ -9,7 +9,7 @@ namespace DBMSLab.Api.Filters;
 /// <param name="logger">Records server failures with their request trace identifiers.</param>
 public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logger) : IExceptionFilter
 {
-    /// <summary>Maps missing content to 404, transient database failures to 503, and other failures to 500.</summary>
+    /// <summary>Maps access denial to 403, missing content to 404, transient database failures to 503, and other failures to 500.</summary>
     /// <param name="context">The failed MVC action and the HTTP response to populate.</param>
     /// <remarks>
     /// Logs only server failures and adds a trace identifier to handled responses.
@@ -24,6 +24,10 @@ public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logge
 
         var (status, title, detail) = exception switch
         {
+            ContentAccessDeniedException => (
+                StatusCodes.Status403Forbidden,
+                "Access denied",
+                exception.Message),
             ContentNotFoundException => (
                 StatusCodes.Status404NotFound,
                 "Content not found",
