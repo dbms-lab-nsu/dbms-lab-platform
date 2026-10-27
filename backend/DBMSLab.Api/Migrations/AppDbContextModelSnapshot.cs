@@ -131,6 +131,31 @@ namespace DBMSLab.Api.Migrations
                     b.ToTable("courses", (string)null);
                 });
 
+            modelBuilder.Entity("DBMSLab.Api.Domain.CourseEnrollment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CourseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("EnrolledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("UserId", "CourseId")
+                        .IsUnique();
+
+                    b.ToTable("course_enrollments", (string)null);
+                });
+
             modelBuilder.Entity("DBMSLab.Api.Domain.CourseModule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -219,6 +244,34 @@ namespace DBMSLab.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("lessons", (string)null);
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.LessonProgress", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LessonId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LessonId");
+
+                    b.HasIndex("UserId", "LessonId")
+                        .IsUnique();
+
+                    b.ToTable("lesson_progress", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -392,6 +445,25 @@ namespace DBMSLab.Api.Migrations
                     b.Navigation("Author");
                 });
 
+            modelBuilder.Entity("DBMSLab.Api.Domain.CourseEnrollment", b =>
+                {
+                    b.HasOne("DBMSLab.Api.Domain.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DBMSLab.Api.Domain.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DBMSLab.Api.Domain.CourseModule", b =>
                 {
                     b.HasOne("DBMSLab.Api.Domain.Course", "Course")
@@ -423,6 +495,25 @@ namespace DBMSLab.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Topic");
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.LessonProgress", b =>
+                {
+                    b.HasOne("DBMSLab.Api.Domain.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DBMSLab.Api.Domain.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Lesson");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
