@@ -19,9 +19,6 @@ backend/**/obj
 .idea
 
 # Logs
-<<<<<<< HEAD
-*.log
-=======
 *.log
 
 # Python
@@ -30,4 +27,3 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
->>>>>>> origin/main
