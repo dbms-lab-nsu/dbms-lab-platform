@@ -21,6 +21,25 @@ jobs:
       - name: Start services
         run: docker compose up -d --build postgres backend
 
+      - name: Verify schema and migration rerun
+        run: |
+          docker compose exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM "__EFMigrationsHistory"
+              WHERE "MigrationId" = '20261016090907_InitialIdentityAndContent'
+            ) THEN
+              RAISE EXCEPTION 'Initial migration has not been applied';
+            END IF;
+            PERFORM 'users'::regclass;
+            IF NOT EXISTS (SELECT 1 FROM roles WHERE "Name" = 'Student') THEN
+              RAISE EXCEPTION 'Student role is missing';
+            END IF;
+          END $$;
+          SQL
+          docker compose run --rm migrations
+
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
         with:
@@ -29,12 +48,12 @@ jobs:
       - name: Wait for backend
         run: |
           for i in {1..30}; do
-            if curl --fail --silent http://localhost:8080/api/health; then
+            if curl --fail --silent http://localhost:8080/api/health/db; then
               exit 0
             fi
             sleep 2
           done
-          docker compose logs backend
+          docker compose logs postgres migrations backend
           exit 1
 
       - name: Run tests
