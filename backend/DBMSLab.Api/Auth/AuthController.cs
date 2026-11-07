@@ -13,7 +13,8 @@ namespace DBMSLab.Api.Auth;
 public sealed class AuthController(
     UserManager<AppUser> userManager,
     AppDbContext db,
-    JwtTokenService tokens) : ControllerBase
+    JwtTokenService tokens,
+    UserProfileService profiles) : ControllerBase
 {
     [HttpPost("register")]
     [AllowAnonymous]
@@ -61,11 +62,7 @@ public sealed class AuthController(
     [Authorize]
     public async Task<ActionResult<UserResponse>> Me()
     {
-        var user = await userManager.GetUserAsync(User);
-        if (user is null)
-            return Unauthorized();
-        var roles = await userManager.GetRolesAsync(user);
-        return Ok(new UserResponse(user.Id, user.Email ?? string.Empty,
-            user.FirstName, user.LastName, roles));
+        var profile = await profiles.GetAsync(User);
+        return profile is null ? Unauthorized() : Ok(profile);
     }
 }
