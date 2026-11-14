@@ -3,10 +3,34 @@ name: API Tests
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      run_perfomance:
+        description: Run the optional perfomance suite
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   api-tests:
+    name: API / ${{ matrix.suite }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - suite: functional
+            expression: not jwt and not perfomance
+            jwt_signing: ""
+          - suite: jwt
+            expression: jwt and not perfomance
+            jwt_signing: --run-jwt-signing
 
     steps:
       - name: Checkout repository
@@ -15,32 +39,132 @@ jobs:
       - name: Create environment
         run: |
           cp .env.example .env
-          echo "JWT_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
-          echo "JWT_KEY=$(openssl rand -hex 32)" >> .env
+          jwt_key="$(openssl rand -hex 32)"
+          echo "::add-mask::$jwt_key"
+          echo "JWT_KEY=$jwt_key" >> "$GITHUB_ENV"
+          echo "JWT_KEY=$jwt_key" >> .env
 
       - name: Start services
         run: docker compose up -d --build postgres backend
+
+      - name: Verify schema and migration rerun
+        if: matrix.suite == 'functional'
+        run: |
+          docker compose exec -T postgres sh -c 'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM "__EFMigrationsHistory"
+              WHERE "MigrationId" = '20261016090907_InitialIdentityAndContent'
+            ) THEN
+              RAISE EXCEPTION 'Initial migration has not been applied';
+            END IF;
+            PERFORM 'users'::regclass;
+            IF NOT EXISTS (SELECT 1 FROM roles WHERE "Name" = 'Student') THEN
+              RAISE EXCEPTION 'Student role is missing';
+            END IF;
+          END $$;
+          SQL
+          docker compose run --rm migrations
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.14"
 
+      - name: Install test dependencies
+        working-directory: tests
+        run: uv sync --frozen
+
       - name: Wait for backend
         run: |
           for i in {1..30}; do
-            if curl --fail --silent http://localhost:8080/api/health; then
+            if curl --fail --silent http://localhost:8080/api/health/db; then
               exit 0
             fi
             sleep 2
           done
-          docker compose logs backend
+          docker compose logs postgres migrations backend
           exit 1
 
       - name: Run tests
         working-directory: tests
-        run: uv run pytest -v
+        run: >-
+          uv run --frozen pytest -v
+          -m "${{ matrix.expression }}"
+          ${{ matrix.jwt_signing }}
+          --junitxml=report.xml
 
       - name: Show logs on failure
         if: failure()
-        run: docker compose logs
+        run: docker compose logs --no-color > compose.log
+
+      - name: Upload test results and failure logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-${{ matrix.suite }}-results
+          path: |
+            tests/report.xml
+            compose.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  perfomance:
+    name: API / perfomance
+    if: github.event_name == 'workflow_dispatch' && inputs.run_perfomance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install test dependencies
+        working-directory: tests
+        run: uv sync --frozen
+
+      - name: Create environment
+        run: |
+          cp .env.example .env
+          jwt_key="$(openssl rand -hex 32)"
+          echo "::add-mask::$jwt_key"
+          echo "JWT_KEY=$jwt_key" >> "$GITHUB_ENV"
+          echo "JWT_KEY=$jwt_key" >> .env
+
+      - name: Start services
+        run: docker compose up -d --build postgres backend
+
+      - name: Wait for backend
+        run: |
+          for i in {1..30}; do
+            if curl --fail --silent http://localhost:8080/api/health/db; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
+
+      - name: Run perfomance tests
+        working-directory: tests
+        run: uv run --frozen pytest -v -m perfomance --junitxml=report.xml
+
+      - name: Collect logs on failure
+        if: failure()
+        run: docker compose logs --no-color > compose.log
+
+      - name: Upload test results and failure logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-perfomance-results
+          path: |
+            tests/report.xml
+            compose.log
+          if-no-files-found: ignore
+          retention-days: 7
