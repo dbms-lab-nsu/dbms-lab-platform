@@ -89,3 +89,24 @@ with `run_perfomance` enabled. It does not run on pull requests and should not
 be configured as a required branch-protection check. It uses its own stack and
 uploads its own report and failure logs. A failure is visible and fails the
 manually selected workflow run.
+
+## Author course tests
+
+These tests describe the expected course API contract. The course endpoints
+are not implemented yet, so the suite is not expected to pass at this stage.
+
+Provision an Author account on the test backend and supply its credentials
+through TEST_AUTHOR_EMAIL and TEST_AUTHOR_PASSWORD in the process environment.
+Do not commit credentials. Missing settings cause a setup error for Author tests.
+The tests obtain the account ID and JWT through login and profile requests.
+Automatic Author provisioning remains pending role-management support.
+
+Run from tests/ after the backend is available:
+
+```bash
+uv run pytest -v api/test_author_courses.py --junitxml=author-courses.xml
+```
+
+Courses use unique titles and remain in the test database after execution.
+The creation test expects a JSON array from GET /api/author/courses containing
+full course objects without pagination, including Draft courses.
