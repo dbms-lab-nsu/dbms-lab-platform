@@ -9,7 +9,7 @@ namespace DBMSLab.Api.Filters;
 /// <param name="logger">Records server failures with their request trace identifiers.</param>
 public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logger) : IExceptionFilter
 {
-    /// <summary>Maps access denial to 403, missing content to 404, transient database failures to 503, and other failures to 500.</summary>
+    /// <summary>Maps content validation, authorization, state conflicts, and database failures to HTTP errors.</summary>
     /// <param name="context">The failed MVC action and the HTTP response to populate.</param>
     /// <remarks>
     /// Logs only server failures and adds a trace identifier to handled responses.
@@ -24,6 +24,14 @@ public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logge
 
         var (status, title, detail) = exception switch
         {
+            AuthorCourseValidationException => (
+                StatusCodes.Status400BadRequest,
+                "One or more validation errors occurred.",
+                (string?)null),
+            ContentAccountRequiredException => (
+                StatusCodes.Status401Unauthorized,
+                "Unauthorized",
+                "A valid account is required to manage courses."),
             ContentAccessDeniedException => (
                 StatusCodes.Status403Forbidden,
                 "Access denied",
@@ -31,6 +39,10 @@ public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logge
             ContentNotFoundException => (
                 StatusCodes.Status404NotFound,
                 "Content not found",
+                exception.Message),
+            CourseStateConflictException => (
+                StatusCodes.Status409Conflict,
+                "Course state conflict",
                 exception.Message),
             _ when IsDatabaseUnavailable(exception) => (
                 StatusCodes.Status503ServiceUnavailable,
@@ -46,13 +58,16 @@ public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logge
             logger.LogError(exception, "Request {TraceId} failed with status {StatusCode}.",
                 httpContext.TraceIdentifier, status);
 
-        var problem = new ProblemDetails
-        {
-            Status = status,
-            Title = title,
-            Detail = detail,
-            Instance = httpContext.Request.Path
-        };
+        if (status == StatusCodes.Status401Unauthorized)
+            httpContext.Response.Headers.WWWAuthenticate = "Bearer";
+
+        var problem = exception is AuthorCourseValidationException validation
+            ? new ValidationProblemDetails(validation.Errors)
+            : new ProblemDetails();
+        problem.Status = status;
+        problem.Title = title;
+        problem.Detail = detail;
+        problem.Instance = httpContext.Request.Path;
         problem.Extensions["traceId"] = httpContext.TraceIdentifier;
 
         context.Result = new ObjectResult(problem)
