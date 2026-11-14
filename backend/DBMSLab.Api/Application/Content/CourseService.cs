@@ -1,13 +1,14 @@
 using System.Security.Claims;
 using DBMSLab.Api.Application.Content.Contracts;
 using DBMSLab.Api.Domain;
+using Microsoft.AspNetCore.Identity;
 
 namespace DBMSLab.Api.Application.Content;
 
-/// <summary>Builds content API responses using publication rules and caller-specific preview permissions.</summary>
-/// <param name="courses">Reads stored content and its publication state.</param>
-/// <remarks>The API validates JWTs; this service checks course ownership and roles for previews.</remarks>
-public sealed class CourseService(ICourseRepository courses)
+/// <summary>Applies publication and ownership rules to content reads and author operations.</summary>
+/// <param name="courses">Reads and writes stored course content.</param>
+/// <param name="users">Resolves authenticated author accounts through Identity.</param>
+public sealed partial class CourseService(ICourseRepository courses, UserManager<AppUser> users)
 {
     /// <summary>Returns published course cards with pagination metadata.</summary>
     /// <param name="query">Validated page settings: a page of at least 1 and a page size from 1 to 100.</param>
