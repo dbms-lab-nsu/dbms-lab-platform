@@ -1,0 +1,46 @@
+name: API Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create environment
+        run: |
+          cp .env.example .env
+          echo "JWT_KEY=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "JWT_KEY=$(openssl rand -hex 32)" >> .env
+
+      - name: Start services
+        run: docker compose up -d --build postgres backend
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.14"
+
+      - name: Wait for backend
+        run: |
+          for i in {1..30}; do
+            if curl --fail --silent http://localhost:8080/api/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs backend
+          exit 1
+
+      - name: Run tests
+        working-directory: tests
+        run: uv run pytest -v
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs

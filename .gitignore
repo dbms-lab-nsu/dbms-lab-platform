@@ -20,3 +20,10 @@ backend/**/obj
 
 # Logs
 *.log
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
