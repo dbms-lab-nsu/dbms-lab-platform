@@ -12,6 +12,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<CourseModule> Modules => Set<CourseModule>();
     public DbSet<CourseTopic> Topics => Set<CourseTopic>();
     public DbSet<Lesson> Lessons => Set<Lesson>();
+    public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
+    public DbSet<LessonProgress> LessonProgresses => Set<LessonProgress>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,6 +79,28 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
             entity.HasIndex(x => new { x.TopicId, x.SortOrder }).IsUnique();
             entity.HasOne(x => x.Topic).WithMany(x => x.Lessons).HasForeignKey(x => x.TopicId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<CourseEnrollment>(entity =>
+        {
+            entity.ToTable("course_enrollments");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.UserId, x.CourseId }).IsUnique();
+            entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Course).WithMany().HasForeignKey(x => x.CourseId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<LessonProgress>(entity =>
+        {
+            entity.ToTable("lesson_progress");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.UserId, x.LessonId }).IsUnique();
+            entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Lesson).WithMany().HasForeignKey(x => x.LessonId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 
