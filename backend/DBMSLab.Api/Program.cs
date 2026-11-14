@@ -1,7 +1,9 @@
 using System.Text;
+using DBMSLab.Api.Application.Content;
 using DBMSLab.Api.Auth;
 using DBMSLab.Api.Data;
 using DBMSLab.Api.Domain;
+using DBMSLab.Api.Repositories.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +56,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
+builder.Services.AddScoped<ICourseRepository, CourseRepository>();
+builder.Services.AddScoped<CourseService>();
 builder.Services.AddSingleton<JwtTokenService>();
 builder.Services.AddOpenApi();
 
