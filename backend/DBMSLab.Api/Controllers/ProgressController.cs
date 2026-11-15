@@ -99,6 +99,12 @@ public sealed class ProgressController(IProgressService service) : ControllerBas
                 "Invalid lesson progress status.",
                 StatusCodes.Status400BadRequest));
 
+        if (!Enum.IsDefined(request.Status))
+            return BadRequest(new ErrorResponse(
+                "bad_request",
+                "Invalid lesson progress status.",
+                StatusCodes.Status400BadRequest));
+
         try
         {
             var entity = await service.UpdateLessonProgressAsync(userId.Value, lessonId, request.Status, ct);

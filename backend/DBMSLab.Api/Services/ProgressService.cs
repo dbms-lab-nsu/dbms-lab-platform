@@ -45,14 +45,6 @@ public sealed class ProgressService(
         }
         else
         {
-            // A completed lesson cannot be moved back to "Not started".
-            if (entity.Status == LessonProgressStatus.Completed &&
-                status == LessonProgressStatus.NotStarted)
-            {
-                throw new InvalidOperationException(
-                    "Cannot move a completed lesson back to the 'Not started' state.");
-            }
-
             entity.Status = status;
             entity.UpdatedAt = DateTime.UtcNow;
         }

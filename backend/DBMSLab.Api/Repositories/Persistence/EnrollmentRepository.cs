@@ -2,7 +2,7 @@ using DBMSLab.Api.Data;
 using DBMSLab.Api.Domain;
 using Microsoft.EntityFrameworkCore;
 
-namespace DBMSLab.Api.Repositories;
+namespace DBMSLab.Api.Repositories.Persistence;
 
 public sealed class EnrollmentRepository(AppDbContext db) : IEnrollmentRepository
 {
