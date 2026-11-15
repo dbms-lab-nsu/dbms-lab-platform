@@ -4,8 +4,8 @@ using DBMSLab.Api.Auth;
 using DBMSLab.Api.Data;
 using DBMSLab.Api.Domain;
 using DBMSLab.Api.Repositories;
-using DBMSLab.Api.Services;
 using DBMSLab.Api.Repositories.Persistence;
+using DBMSLab.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -65,6 +65,9 @@ builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
 builder.Services.AddScoped<IProgressRepository, ProgressRepository>();
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 builder.Services.AddScoped<IProgressService, ProgressService>();
+builder.Services.AddScoped<ITestRepository, TestRepository>();
+builder.Services.AddScoped<ITestAttemptRepository, TestAttemptRepository>();
+builder.Services.AddScoped<ITestService, TestService>();
 builder.Services.AddOpenApi();
 
 builder.Services.AddCors(options =>

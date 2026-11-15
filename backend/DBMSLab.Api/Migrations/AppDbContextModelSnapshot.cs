@@ -22,6 +22,37 @@ namespace DBMSLab.Api.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DBMSLab.Api.Domain.AnswerOption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId")
+                        .IsUnique()
+                        .HasFilter("\"IsCorrect\" = true");
+
+                    b.HasIndex("QuestionId", "SortOrder")
+                        .IsUnique();
+
+                    b.ToTable("answer_options", (string)null);
+                });
+
             modelBuilder.Entity("DBMSLab.Api.Domain.AppUser", b =>
                 {
                     b.Property<Guid>("Id")
@@ -274,6 +305,127 @@ namespace DBMSLab.Api.Migrations
                     b.ToTable("lesson_progress", (string)null);
                 });
 
+            modelBuilder.Entity("DBMSLab.Api.Domain.Test", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("TopicId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TopicId", "SortOrder")
+                        .IsUnique();
+
+                    b.ToTable("tests", (string)null);
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.TestAnswer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AnswerOptionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AnswerOptionId");
+
+                    b.HasIndex("AttemptId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("AttemptId", "QuestionId")
+                        .IsUnique();
+
+                    b.ToTable("test_answers", (string)null);
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.TestAttempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsPassed")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ScorePercent")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("TestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TestId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("test_attempts", (string)null);
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.TestQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TestId", "SortOrder")
+                        .IsUnique();
+
+                    b.ToTable("test_questions", (string)null);
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
                 {
                     b.Property<Guid>("Id")
@@ -434,6 +586,17 @@ namespace DBMSLab.Api.Migrations
                     b.ToTable("user_tokens", (string)null);
                 });
 
+            modelBuilder.Entity("DBMSLab.Api.Domain.AnswerOption", b =>
+                {
+                    b.HasOne("DBMSLab.Api.Domain.TestQuestion", "Question")
+                        .WithMany("AnswerOptions")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+                });
+
             modelBuilder.Entity("DBMSLab.Api.Domain.Course", b =>
                 {
                     b.HasOne("DBMSLab.Api.Domain.AppUser", "Author")
@@ -516,6 +679,74 @@ namespace DBMSLab.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DBMSLab.Api.Domain.Test", b =>
+                {
+                    b.HasOne("DBMSLab.Api.Domain.CourseTopic", "Topic")
+                        .WithMany()
+                        .HasForeignKey("TopicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Topic");
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.TestAnswer", b =>
+                {
+                    b.HasOne("DBMSLab.Api.Domain.AnswerOption", "AnswerOption")
+                        .WithMany("SelectedBy")
+                        .HasForeignKey("AnswerOptionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DBMSLab.Api.Domain.TestAttempt", "Attempt")
+                        .WithMany("Answers")
+                        .HasForeignKey("AttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DBMSLab.Api.Domain.TestQuestion", "Question")
+                        .WithMany("UserAnswers")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AnswerOption");
+
+                    b.Navigation("Attempt");
+
+                    b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.TestAttempt", b =>
+                {
+                    b.HasOne("DBMSLab.Api.Domain.Test", "Test")
+                        .WithMany("Attempts")
+                        .HasForeignKey("TestId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DBMSLab.Api.Domain.AppUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Test");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.TestQuestion", b =>
+                {
+                    b.HasOne("DBMSLab.Api.Domain.Test", "Test")
+                        .WithMany("Questions")
+                        .HasForeignKey("TestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Test");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
@@ -567,6 +798,11 @@ namespace DBMSLab.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("DBMSLab.Api.Domain.AnswerOption", b =>
+                {
+                    b.Navigation("SelectedBy");
+                });
+
             modelBuilder.Entity("DBMSLab.Api.Domain.Course", b =>
                 {
                     b.Navigation("Modules");
@@ -580,6 +816,25 @@ namespace DBMSLab.Api.Migrations
             modelBuilder.Entity("DBMSLab.Api.Domain.CourseTopic", b =>
                 {
                     b.Navigation("Lessons");
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.Test", b =>
+                {
+                    b.Navigation("Attempts");
+
+                    b.Navigation("Questions");
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.TestAttempt", b =>
+                {
+                    b.Navigation("Answers");
+                });
+
+            modelBuilder.Entity("DBMSLab.Api.Domain.TestQuestion", b =>
+                {
+                    b.Navigation("AnswerOptions");
+
+                    b.Navigation("UserAnswers");
                 });
 #pragma warning restore 612, 618
         }
