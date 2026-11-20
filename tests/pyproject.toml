@@ -10,3 +10,12 @@ dev = [
     "pytest>=9.1.1",
     "ruff>=0.17.2",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["api"]
+addopts = "--strict-markers -m 'not perfomance'"
+markers = [
+    "perfomance: concurrency and performance tests, excluded by default",
+    "jwt: JWT security tests against the API",
+    "jwt_signing: tests requiring the test backend JWT_KEY and --run-jwt-signing",
+]

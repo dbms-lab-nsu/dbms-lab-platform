@@ -18,6 +18,20 @@ services:
       timeout: 5s
       retries: 10
 
+  migrations:
+    build:
+      context: ./backend/DBMSLab.Api
+      dockerfile: Dockerfile
+      target: migrations
+    restart: "no"
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING:-Host=postgres;Port=5432;Database=dbms_lab;Username=dbms_lab_user;Password=dbms_lab_password}
+      Jwt__Key: ${JWT_KEY:?Set JWT_KEY in .env}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   backend:
     build:
       context: ./backend/DBMSLab.Api
@@ -34,6 +48,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
 
   frontend:
     build:
