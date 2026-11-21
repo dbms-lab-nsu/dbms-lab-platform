@@ -92,10 +92,7 @@ manually selected workflow run.
 
 ## Author course tests
 
-These tests describe the expected course API contract. The course endpoints
-are not implemented in main yet. The module is temporarily marked
-xfail(run=False), so its tests and fixtures do not execute.
-Remove the marker after TASK-19091 is integrated.
+These tests cover course creation and access checks for the author course API.
 
 The repository .env.example enables TEST_PROVISION_AUTHOR=1. With this setting,
 the author fixture registers a unique user through the API and assigns Author
@@ -111,7 +108,7 @@ existing Author account. These take precedence over automatic provisioning.
 Both values must be provided together. Do not commit credentials.
 The fixture obtains the account ID and JWT through login and profile requests.
 
-After the temporary xfail marker is removed, run from tests/:
+Run from tests/:
 
 ```bash
 uv run --env-file ../.env pytest -v api/test_author_courses.py --junitxml=author-courses.xml

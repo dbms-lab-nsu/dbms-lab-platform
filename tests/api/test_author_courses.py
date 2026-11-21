@@ -6,12 +6,6 @@ from uuid import UUID, uuid4
 
 import pytest
 
-pytestmark = pytest.mark.xfail(
-    reason=(
-        "Pending TASK-19091 integration and Author account provisioning in CI."
-    ),
-    run=False,
-)
 
 @pytest.fixture
 def course_data():
