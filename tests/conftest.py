@@ -38,7 +38,6 @@ def api_client():
     with httpx.Client(base_url=base_url, timeout=10.0) as client:
         yield client
 
-
 @pytest.fixture
 def user_data():
     return {
