@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import Navigation from './Navigation';
-import MobileMenu from './MobileMenu';
-import Container from '../ui/Container';
-import styles from './Header.module.css';
+import Link from "next/link";
+import Navigation from "./Navigation";
+import MobileMenu from "./MobileMenu";
+import Container from "../ui/Container";
+import styles from "./Header.module.css";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Header() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { status, user, logout } = useAuth();
 
   return (
     <header className={styles.header}>
@@ -25,18 +25,20 @@ export default function Header() {
           </div>
 
           <div className={styles.authArea}>
-            <button 
-              className={styles.demoToggle} 
-              onClick={() => setIsAuthenticated(!isAuthenticated)}
-              title="Переключить состояние авторизации"
-            >
-              {isAuthenticated ? 'Выйти' : 'Войти'}
-            </button>
-
-            {isAuthenticated ? (
-              <Link href="/profile" className={styles.profileLink}>
-                Личный кабинет
-              </Link>
+            {status === "loading" ? (
+              <span className={styles.authSkeleton} aria-hidden />
+            ) : status === "authenticated" && user ? (
+              <>
+                <span className={styles.userName} title={user.email}>
+                  {user.firstName} {user.lastName}
+                </span>
+                <Link href="/profile" className={styles.profileLink}>
+                  Личный кабинет
+                </Link>
+                <button className={styles.logoutBtn} onClick={logout} type="button">
+                  Выйти
+                </button>
+              </>
             ) : (
               <div className={styles.authLinks}>
                 <Link href="/login" className={styles.loginLink}>Вход</Link>

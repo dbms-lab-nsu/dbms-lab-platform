@@ -32,21 +32,6 @@
   gap: 16px;
 }
 
-.demoToggle {
-  background: none;
-  border: 1px dashed var(--border-color);
-  color: var(--text-muted);
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.demoToggle:hover {
-  color: var(--foreground);
-  border-color: var(--foreground);
-}
-
 .authLinks {
   display: flex;
   align-items: center;
@@ -86,6 +71,40 @@
 .profileLink:hover {
   border-color: var(--primary);
   color: var(--primary);
+}
+
+.userName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--foreground);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutBtn {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.logoutBtn:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.authSkeleton {
+  display: inline-block;
+  width: 96px;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--border-color);
+  opacity: 0.5;
 }
 
 @media (max-width: 768px) {
