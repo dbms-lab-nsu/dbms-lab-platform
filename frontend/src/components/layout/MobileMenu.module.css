@@ -71,3 +71,12 @@
   background-color: rgba(88, 96, 204, 0.1);
   color: var(--primary);
 }
+
+.logoutButton {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
