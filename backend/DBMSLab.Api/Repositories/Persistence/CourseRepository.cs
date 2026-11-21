@@ -1,3 +1,4 @@
+using System.Data;
 using DBMSLab.Api.Application.Content;
 using DBMSLab.Api.Data;
 using DBMSLab.Api.Domain;
@@ -5,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DBMSLab.Api.Repositories.Persistence;
 
-/// <summary>Projects PostgreSQL course data into read models using EF Core without entity tracking.</summary>
+/// <summary>Reads course projections and persists transactional updates through EF Core and PostgreSQL.</summary>
 /// <param name="db">The scoped context used to execute content queries.</param>
 /// <remarks>Visibility checks belong to the service; this repository returns stored state and ownership.</remarks>
 public sealed class CourseRepository(AppDbContext db) : ICourseRepository
@@ -84,4 +85,46 @@ public sealed class CourseRepository(AppDbContext db) : ICourseRepository
                 lesson.Topic.Module.Course.Status,
                 lesson.Topic.Module.Course.AuthorId))
             .SingleOrDefaultAsync(cancellationToken);
+
+    /// <inheritdoc />
+    public async Task AddCourseAsync(Course course, CancellationToken cancellationToken)
+    {
+        db.Courses.Add(course);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CourseReadModel>> GetCoursesByAuthorAsync(
+        Guid authorId, CancellationToken cancellationToken) =>
+        await db.Courses.AsNoTracking()
+            .Where(course => course.AuthorId == authorId)
+            .OrderBy(course => course.Title)
+            .ThenBy(course => course.Id)
+            .Select(course => new CourseReadModel(
+                course.Id, course.Title, course.Description, course.Status, course.AuthorId))
+            .ToListAsync(cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<Course?> ChangeCourseAsync(Guid id, Func<Course, CancellationToken, Task> change,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken);
+        // Materialize the locking query before invoking the service so it sees the latest committed state.
+        var rows = await db.Courses.FromSql($"""SELECT * FROM courses WHERE "Id" = {id} FOR UPDATE""")
+            .ToListAsync(cancellationToken);
+        var course = rows.SingleOrDefault();
+        if (course is null)
+            return null;
+
+        await change(course, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return course;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Lesson>> GetCourseLessonsForUpdateAsync(
+        Guid courseId, CancellationToken cancellationToken) =>
+        await db.Lessons.Where(lesson => lesson.Topic.Module.CourseId == courseId)
+            .ToListAsync(cancellationToken);
 }

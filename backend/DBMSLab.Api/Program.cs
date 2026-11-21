@@ -1,5 +1,6 @@
 using System.Text;
 using DBMSLab.Api.Application.Content;
+using DBMSLab.Api.Application.Content.Contracts;
 using DBMSLab.Api.Auth;
 using DBMSLab.Api.Contracts;
 using DBMSLab.Api.Data;
@@ -72,7 +73,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddOpenApi(options =>
     options.AddSchemaTransformer((schema, context, _) =>
     {
-        if (context.JsonTypeInfo.Type == typeof(UpdateProfileRequest))
+        if (context.JsonTypeInfo.Type == typeof(UpdateProfileRequest) ||
+            context.JsonTypeInfo.Type == typeof(UpdateCourseRequest))
         {
             schema.MinProperties = 1;
 
