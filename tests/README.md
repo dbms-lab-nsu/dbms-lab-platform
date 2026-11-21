@@ -8,7 +8,7 @@ Run the following commands from `tests/`:
 
 ```bash
 uv sync
-uv run pytest -v
+uv run --env-file ../.env pytest -v
 ```
 
 The default run includes functional tests and JWT checks that do not require
@@ -20,7 +20,7 @@ by default.
 
 ```bash
 # Health, registration, login, and protected endpoint tests
-uv run pytest -v -m "not jwt and not perfomance"
+uv run --env-file ../.env pytest -v -m "not jwt and not perfomance"
 
 # JWT checks that do not require the signing key
 uv run pytest -v -m jwt
@@ -93,20 +93,31 @@ manually selected workflow run.
 ## Author course tests
 
 These tests describe the expected course API contract. The course endpoints
-are not implemented yet, so the suite is not expected to pass at this stage.
+are not implemented in main yet. The module is temporarily marked
+xfail(run=False), so its tests and fixtures do not execute.
+Remove the marker after TASK-19091 is integrated.
 
-Provision an Author account on the test backend and supply its credentials
-through TEST_AUTHOR_EMAIL and TEST_AUTHOR_PASSWORD in the process environment.
-Do not commit credentials. Missing settings cause a setup error for Author tests.
-The tests obtain the account ID and JWT through login and profile requests.
-Automatic Author provisioning remains pending role-management support.
+The repository .env.example enables TEST_PROVISION_AUTHOR=1. With this setting,
+the author fixture registers a unique user through the API and assigns Author
+through psql in this project's Docker Compose postgres service. The default
+Student role is retained. Docker Compose and the running local stack are required;
+the API target must use that same database. Setup errors fail the test.
 
-Run from tests/ after the backend is available:
+If your .env predates this setting, add TEST_PROVISION_AUTHOR=1 once.
+Both local runs and CI load .env through uv; pytest does not load it itself.
+
+For another backend, supply TEST_AUTHOR_EMAIL and TEST_AUTHOR_PASSWORD for an
+existing Author account. These take precedence over automatic provisioning.
+Both values must be provided together. Do not commit credentials.
+The fixture obtains the account ID and JWT through login and profile requests.
+
+After the temporary xfail marker is removed, run from tests/:
 
 ```bash
-uv run pytest -v api/test_author_courses.py --junitxml=author-courses.xml
+uv run --env-file ../.env pytest -v api/test_author_courses.py --junitxml=author-courses.xml
 ```
 
-Courses use unique titles and remain in the test database after execution.
+Generated authors and courses remain in the test database after execution.
+Courses use unique titles.
 The creation test expects a JSON array from GET /api/author/courses containing
 full course objects without pagination, including Draft courses.

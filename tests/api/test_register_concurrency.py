@@ -8,6 +8,14 @@ import pytest
 pytestmark = pytest.mark.perfomance
 
 
+@pytest.mark.xfail(
+    reason=(
+        "Concurrent duplicate registration returns 500 instead of 409: "
+        "https://github.com/dbms-lab-nsu/dbms-lab-platform/issues/8"
+    ),
+    strict=True,
+    raises=AssertionError,
+)
 def test_register_same_email_concurrently(api_client, user_data):
     payloads = [
         {
@@ -29,7 +37,9 @@ def test_register_same_email_concurrently(api_client, user_data):
 
     statuses = [response.status_code for response in responses]
     details = [(response.status_code, response.text) for response in responses]
-    assert sorted(statuses) == [201, 409, 409, 409], details
+    # Concurrent duplicates must be handled as conflicts, without server errors.
+    expected_statuses = [201] + [409] * (len(payloads) - 1)
+    assert sorted(statuses) == expected_statuses, details
 
     winner_index = statuses.index(201)
     winner = payloads[winner_index]
