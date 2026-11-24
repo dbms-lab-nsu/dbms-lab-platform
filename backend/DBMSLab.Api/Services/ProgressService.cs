@@ -1,3 +1,4 @@
+using DBMSLab.Api.Application.Content;
 using DBMSLab.Api.Contracts;
 using DBMSLab.Api.Data;
 using DBMSLab.Api.Domain;
@@ -10,11 +11,12 @@ namespace DBMSLab.Api.Services;
 public sealed class ProgressService(
     IProgressRepository progress,
     IEnrollmentRepository enrollments,
-    AppDbContext db) : IProgressService
+    AppDbContext db,
+    LearningAccessService access) : IProgressService
 {
     /// <summary>
     /// Updates the lesson progress status for the current user.
-    /// Checks that the user is enrolled in the course the lesson belongs to.
+    /// Requires a published lesson in a published enrolled course, without preview exceptions.
     /// </summary>
     public async Task<LessonProgress> UpdateLessonProgressAsync(
         Guid userId,
@@ -22,35 +24,24 @@ public sealed class ProgressService(
         LessonProgressStatus status,
         CancellationToken ct = default)
     {
-        var lesson = await db.Lessons
-            .Include(x => x.Topic).ThenInclude(x => x.Module)
-            .FirstOrDefaultAsync(x => x.Id == lessonId, ct);
-        if (lesson is null)
-            throw new KeyNotFoundException("Lesson not found.");
-
-        var isEnrolled = await enrollments.ExistsAsync(userId, lesson.Topic.Module.CourseId, ct);
+        if (!Enum.IsDefined(status))
+            throw new InvalidProgressStatusException();
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        var courseId = await access.LockPublishedLessonAsync(lessonId, ct);
+        var isEnrolled = await enrollments.ExistsAsync(userId, courseId, ct);
         if (!isEnrolled)
-            throw new AccessDeniedException("You are not enrolled in the course this lesson belongs to.");
+            throw new ContentAccessDeniedException("You are not enrolled in the course this lesson belongs to.");
 
-        var entity = await progress.GetByUserAndLessonAsync(userId, lessonId, ct);
-        if (entity is null)
+        var entity = new LessonProgress
         {
-            entity = new LessonProgress
-            {
-                UserId = userId,
-                LessonId = lessonId,
-                Status = status,
-                UpdatedAt = DateTime.UtcNow
-            };
-        }
-        else
-        {
-            entity.Status = status;
-            entity.UpdatedAt = DateTime.UtcNow;
-        }
-
-        await progress.AddOrUpdateAsync(entity, ct);
-        return entity;
+            UserId = userId,
+            LessonId = lessonId,
+            Status = status,
+            UpdatedAt = DateTime.UtcNow
+        };
+        var saved = await progress.AddOrUpdateAsync(entity, ct);
+        await transaction.CommitAsync(ct);
+        return saved;
     }
 
     /// <summary>
@@ -60,17 +51,16 @@ public sealed class ProgressService(
     /// </summary>
     public async Task<CourseProgressDto> GetCourseProgressAsync(Guid userId, Guid courseId, CancellationToken ct = default)
     {
-        var course = await db.Courses.FirstOrDefaultAsync(x => x.Id == courseId, ct);
-        if (course is null)
-            throw new KeyNotFoundException("Course not found.");
+        if (!await db.Courses.AnyAsync(x => x.Id == courseId, ct))
+            throw new ContentNotFoundException("The course was not found.");
 
         var isEnrolled = await enrollments.ExistsAsync(userId, courseId, ct);
         if (!isEnrolled)
-            throw new AccessDeniedException("You are not enrolled in this course.");
+            throw new ContentAccessDeniedException("You are not enrolled in this course.");
 
         var publishedLessons = await db.Lessons
-            .Include(x => x.Topic).ThenInclude(x => x.Module)
             .Where(x => x.Topic.Module.CourseId == courseId && x.IsPublished)
+            .Select(x => x.Id)
             .ToListAsync(ct);
 
         var userProgress = await progress.GetByCourseAsync(userId, courseId, ct);
@@ -79,7 +69,7 @@ public sealed class ProgressService(
         int completed = 0;
         foreach (var lesson in publishedLessons)
         {
-            if (progressByLesson.TryGetValue(lesson.Id, out var p) && p.Status == LessonProgressStatus.Completed)
+            if (progressByLesson.TryGetValue(lesson, out var p) && p.Status == LessonProgressStatus.Completed)
                 completed++;
         }
 

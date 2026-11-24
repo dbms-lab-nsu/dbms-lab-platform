@@ -122,7 +122,8 @@ public sealed partial class CourseService(ICourseRepository courses, UserManager
     private static bool CanAccessLesson(
         bool isPublished, CourseStatus courseStatus, Guid courseAuthorId, ClaimsPrincipal user) =>
         user.Identity?.IsAuthenticated == true
-        && ((isPublished && courseStatus == CourseStatus.Published) || CanPreviewCourse(courseAuthorId, user));
+        && (ContentAccessRules.CanReadPublishedLesson(true, isPublished, courseStatus)
+            || CanPreviewCourse(courseAuthorId, user));
 
     /// <summary>Allows administrators or an authenticated Author who owns the requested course to preview it.</summary>
     /// <param name="authorId">The course owner read from the database.</param>

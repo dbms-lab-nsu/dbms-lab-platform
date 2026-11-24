@@ -7,33 +7,28 @@ namespace DBMSLab.Api.Repositories.Persistence;
 public sealed class ProgressRepository(AppDbContext db) : IProgressRepository
 {
     public Task<LessonProgress?> GetByUserAndLessonAsync(Guid userId, Guid lessonId, CancellationToken ct = default)
-        => db.LessonProgresses
+        => db.LessonProgresses.AsNoTracking()
             .FirstOrDefaultAsync(x => x.UserId == userId && x.LessonId == lessonId, ct);
 
     public async Task<IEnumerable<LessonProgress>> GetByUserAsync(Guid userId, CancellationToken ct = default)
-        => await db.LessonProgresses
+        => await db.LessonProgresses.AsNoTracking()
             .Where(x => x.UserId == userId)
             .ToListAsync(ct);
 
     public async Task<IEnumerable<LessonProgress>> GetByCourseAsync(Guid userId, Guid courseId, CancellationToken ct = default)
-        => await db.LessonProgresses
-            .Include(x => x.Lesson).ThenInclude(x => x.Topic).ThenInclude(x => x.Module)
+        => await db.LessonProgresses.AsNoTracking()
             .Where(x => x.UserId == userId && x.Lesson.Topic.Module.CourseId == courseId)
             .ToListAsync(ct);
 
-    public async Task AddOrUpdateAsync(LessonProgress progress, CancellationToken ct = default)
+    public async Task<LessonProgress> AddOrUpdateAsync(LessonProgress progress, CancellationToken ct = default)
     {
-        var existing = await GetByUserAndLessonAsync(progress.UserId, progress.LessonId, ct);
-        if (existing is null)
-        {
-            await db.LessonProgresses.AddAsync(progress, ct);
-        }
-        else
-        {
-            existing.Status = progress.Status;
-            existing.UpdatedAt = progress.UpdatedAt;
-        }
-
-        await db.SaveChangesAsync(ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"""
+            INSERT INTO lesson_progress ("Id", "UserId", "LessonId", "Status", "UpdatedAt")
+            VALUES ({progress.Id}, {progress.UserId}, {progress.LessonId}, {(int)progress.Status}, {progress.UpdatedAt})
+            ON CONFLICT ("UserId", "LessonId") DO UPDATE
+            SET "Status" = EXCLUDED."Status", "UpdatedAt" = EXCLUDED."UpdatedAt"
+            WHERE lesson_progress."Status" IS DISTINCT FROM EXCLUDED."Status"
+            """, ct);
+        return (await GetByUserAndLessonAsync(progress.UserId, progress.LessonId, ct))!;
     }
 }

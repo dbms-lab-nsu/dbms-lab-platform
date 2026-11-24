@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Nodes;
 using DBMSLab.Api.Application.Content;
 using DBMSLab.Api.Application.Content.Contracts;
 using DBMSLab.Api.Auth;
@@ -69,7 +70,7 @@ builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
 builder.Services.AddScoped<IProgressRepository, ProgressRepository>();
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 builder.Services.AddScoped<IProgressService, ProgressService>();
-builder.Services.AddOpenApi();
+builder.Services.AddScoped<LearningAccessService>();
 builder.Services.AddOpenApi(options =>
     options.AddSchemaTransformer((schema, context, _) =>
     {
@@ -82,6 +83,22 @@ builder.Services.AddOpenApi(options =>
                 schema.Properties?.Values.OfType<OpenApiSchema>() ?? [])
             {
                 field.Type = JsonSchemaType.String;
+            }
+        }
+
+        if (context.JsonTypeInfo.Type == typeof(LessonProgressRequest)
+            || context.JsonTypeInfo.Type == typeof(LessonProgressResponse))
+        {
+            // Describe the strict string converter; nullable storage is used only for Required validation.
+            foreach (var key in schema.Properties?.Keys
+                .Where(key => key.Equals("status", StringComparison.OrdinalIgnoreCase)).ToList() ?? [])
+            {
+                schema.Properties![key] = new OpenApiSchema
+                {
+                    Type = JsonSchemaType.String,
+                    Enum = Enum.GetNames<LessonProgressStatus>()
+                        .Select(name => (JsonNode)JsonValue.Create(name)!).ToList()
+                };
             }
         }
 
