@@ -1,6 +1,9 @@
 name: API Tests
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
     inputs:
@@ -90,7 +93,7 @@ jobs:
       - name: Run tests
         working-directory: tests
         run: >-
-          uv run --frozen pytest -v
+          uv run --frozen --env-file ../.env pytest -v
           -m "${{ matrix.expression }}"
           ${{ matrix.jwt_signing }}
           --junitxml=report.xml

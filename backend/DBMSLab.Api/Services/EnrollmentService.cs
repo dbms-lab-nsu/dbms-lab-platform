@@ -1,30 +1,22 @@
 using DBMSLab.Api.Data;
 using DBMSLab.Api.Domain;
 using DBMSLab.Api.Repositories;
-using Microsoft.EntityFrameworkCore;
 
 namespace DBMSLab.Api.Services;
 
 public sealed class EnrollmentService(
     IEnrollmentRepository enrollments,
-    AppDbContext db) : IEnrollmentService
+    AppDbContext db,
+    LearningAccessService access) : IEnrollmentService
 {
     public async Task<CourseEnrollment> EnrollAsync(Guid userId, Guid courseId, CancellationToken ct = default)
     {
-        var course = await db.Courses.FirstOrDefaultAsync(x => x.Id == courseId, ct);
-        if (course is null)
-            throw new KeyNotFoundException("Course not found.");
-
-        if (course.Status != CourseStatus.Published)
-            throw new InvalidOperationException("Course is not published and cannot be started.");
-
-        var existing = await enrollments.GetByUserAndCourseAsync(userId, courseId, ct);
-        if (existing is not null)
-            return existing;
-
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await access.LockPublishedCourseAsync(courseId, ct);
         var enrollment = new CourseEnrollment { UserId = userId, CourseId = courseId };
-        await enrollments.AddAsync(enrollment, ct);
-        return enrollment;
+        var saved = await enrollments.AddAsync(enrollment, ct);
+        await transaction.CommitAsync(ct);
+        return saved;
     }
 
     public Task<IEnumerable<CourseEnrollment>> GetUserEnrollmentsAsync(Guid userId, CancellationToken ct = default)
