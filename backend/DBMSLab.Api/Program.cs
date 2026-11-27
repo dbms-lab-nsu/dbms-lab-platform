@@ -1,12 +1,14 @@
 using System.Text;
+using System.Text.Json.Nodes;
 using DBMSLab.Api.Application.Content;
+using DBMSLab.Api.Application.Content.Contracts;
 using DBMSLab.Api.Auth;
 using DBMSLab.Api.Contracts;
 using DBMSLab.Api.Data;
 using DBMSLab.Api.Domain;
 using DBMSLab.Api.Repositories;
-using DBMSLab.Api.Services;
 using DBMSLab.Api.Repositories.Persistence;
+using DBMSLab.Api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -68,11 +70,18 @@ builder.Services.AddScoped<IEnrollmentRepository, EnrollmentRepository>();
 builder.Services.AddScoped<IProgressRepository, ProgressRepository>();
 builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 builder.Services.AddScoped<IProgressService, ProgressService>();
-builder.Services.AddOpenApi();
+
+builder.Services.AddScoped<LearningAccessService>();
+
+builder.Services.AddScoped<ITestRepository, TestRepository>();
+builder.Services.AddScoped<ITestAttemptRepository, TestAttemptRepository>();
+builder.Services.AddScoped<ITestService, TestService>();
+
 builder.Services.AddOpenApi(options =>
     options.AddSchemaTransformer((schema, context, _) =>
     {
-        if (context.JsonTypeInfo.Type == typeof(UpdateProfileRequest))
+        if (context.JsonTypeInfo.Type == typeof(UpdateProfileRequest) ||
+            context.JsonTypeInfo.Type == typeof(UpdateCourseRequest))
         {
             schema.MinProperties = 1;
 
@@ -80,6 +89,22 @@ builder.Services.AddOpenApi(options =>
                 schema.Properties?.Values.OfType<OpenApiSchema>() ?? [])
             {
                 field.Type = JsonSchemaType.String;
+            }
+        }
+
+        if (context.JsonTypeInfo.Type == typeof(LessonProgressRequest)
+            || context.JsonTypeInfo.Type == typeof(LessonProgressResponse))
+        {
+            // Describe the strict string converter; nullable storage is used only for Required validation.
+            foreach (var key in schema.Properties?.Keys
+                .Where(key => key.Equals("status", StringComparison.OrdinalIgnoreCase)).ToList() ?? [])
+            {
+                schema.Properties![key] = new OpenApiSchema
+                {
+                    Type = JsonSchemaType.String,
+                    Enum = Enum.GetNames<LessonProgressStatus>()
+                        .Select(name => (JsonNode)JsonValue.Create(name)!).ToList()
+                };
             }
         }
 
