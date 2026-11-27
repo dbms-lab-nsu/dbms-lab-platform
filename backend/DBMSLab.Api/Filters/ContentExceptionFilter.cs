@@ -1,11 +1,12 @@
 using DBMSLab.Api.Application.Content;
+using DBMSLab.Api.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Npgsql;
 
 namespace DBMSLab.Api.Filters;
 
-/// <summary>Converts failures from content controllers into ProblemDetails without exposing server exception details.</summary>
+/// <summary>Converts content, enrollment, and progress failures to client-safe ProblemDetails.</summary>
 /// <param name="logger">Records server failures with their request trace identifiers.</param>
 public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logger) : IExceptionFilter
 {
@@ -24,14 +25,14 @@ public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logge
 
         var (status, title, detail) = exception switch
         {
-            AuthorCourseValidationException => (
+            AuthorCourseValidationException or InvalidProgressStatusException => (
                 StatusCodes.Status400BadRequest,
                 "One or more validation errors occurred.",
                 (string?)null),
             ContentAccountRequiredException => (
                 StatusCodes.Status401Unauthorized,
                 "Unauthorized",
-                "A valid account is required to manage courses."),
+                "A valid account is required."),
             ContentAccessDeniedException => (
                 StatusCodes.Status403Forbidden,
                 "Access denied",
@@ -61,9 +62,15 @@ public sealed class ContentExceptionFilter(ILogger<ContentExceptionFilter> logge
         if (status == StatusCodes.Status401Unauthorized)
             httpContext.Response.Headers.WWWAuthenticate = "Bearer";
 
-        var problem = exception is AuthorCourseValidationException validation
-            ? new ValidationProblemDetails(validation.Errors)
-            : new ProblemDetails();
+        ProblemDetails problem = exception switch
+        {
+            AuthorCourseValidationException validation => new ValidationProblemDetails(validation.Errors),
+            InvalidProgressStatusException => new ValidationProblemDetails(new Dictionary<string, string[]>
+            {
+                ["status"] = ["Use NotStarted, InProgress, or Completed."]
+            }),
+            _ => new ProblemDetails()
+        };
         problem.Status = status;
         problem.Title = title;
         problem.Detail = detail;
