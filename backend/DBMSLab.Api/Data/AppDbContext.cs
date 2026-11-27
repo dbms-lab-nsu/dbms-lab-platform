@@ -14,6 +14,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Lesson> Lessons => Set<Lesson>();
     public DbSet<CourseEnrollment> CourseEnrollments => Set<CourseEnrollment>();
     public DbSet<LessonProgress> LessonProgresses => Set<LessonProgress>();
+    public DbSet<Test> Tests => Set<Test>();
+    public DbSet<TestQuestion> TestQuestions => Set<TestQuestion>();
+    public DbSet<AnswerOption> AnswerOptions => Set<AnswerOption>();
+    public DbSet<TestAttempt> TestAttempts => Set<TestAttempt>();
+    public DbSet<TestAnswer> TestAnswers => Set<TestAnswer>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -100,6 +105,68 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
             entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Lesson).WithMany().HasForeignKey(x => x.LessonId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Test>(entity =>
+        {
+            entity.ToTable("tests");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Title).HasMaxLength(200).IsRequired();
+            entity.Property(x => x.Description).IsRequired();
+            entity.HasIndex(x => new { x.TopicId, x.SortOrder }).IsUnique();
+            entity.HasOne(x => x.Topic).WithMany().HasForeignKey(x => x.TopicId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TestQuestion>(entity =>
+        {
+            entity.ToTable("test_questions");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Text).IsRequired();
+            entity.HasIndex(x => new { x.TestId, x.SortOrder }).IsUnique();
+            entity.HasOne(x => x.Test).WithMany(x => x.Questions).HasForeignKey(x => x.TestId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AnswerOption>(entity =>
+        {
+            entity.ToTable("answer_options");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Text).IsRequired();
+            entity.HasIndex(x => new { x.QuestionId, x.SortOrder }).IsUnique();
+            entity.HasIndex(x => x.QuestionId)
+                .IsUnique()
+                .HasFilter("\"IsCorrect\" = true");
+            entity.HasOne(x => x.Question).WithMany(x => x.AnswerOptions).HasForeignKey(x => x.QuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TestAttempt>(entity =>
+        {
+            entity.ToTable("test_attempts");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.ScorePercent).IsRequired();
+            entity.HasIndex(x => x.TestId);
+            entity.HasIndex(x => x.UserId);
+            entity.HasOne(x => x.Test).WithMany(x => x.Attempts).HasForeignKey(x => x.TestId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<TestAnswer>(entity =>
+        {
+            entity.ToTable("test_answers");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.AttemptId);
+            entity.HasIndex(x => x.QuestionId);
+            entity.HasIndex(x => new { x.AttemptId, x.QuestionId }).IsUnique();
+            entity.HasOne(x => x.Attempt).WithMany(x => x.Answers).HasForeignKey(x => x.AttemptId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Question).WithMany(x => x.UserAnswers).HasForeignKey(x => x.QuestionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.AnswerOption).WithMany(x => x.SelectedBy).HasForeignKey(x => x.AnswerOptionId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }
