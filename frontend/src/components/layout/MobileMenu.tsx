@@ -23,12 +23,15 @@ const authNavItems = [
 export default function MobileMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
-  const { status, logout } = useAuth();
+  const { status, logout, refreshMe } = useAuth();
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
   const authItems = status === "authenticated" ? authNavItems : guestNavItems;
-  const navItems = [...publicNavItems, ...(status === "loading" ? [] : authItems)];
+  const navItems = [
+    ...publicNavItems,
+    ...(status === "loading" || status === "error" ? [] : authItems),
+  ];
 
   return (
     <div className={styles.mobileWrapper}>
@@ -59,6 +62,20 @@ export default function MobileMenu() {
                 </li>
               );
             })}
+            {status === "error" && (
+              <li>
+                <button
+                  type="button"
+                  className={`${styles.mobileNavLink} ${styles.logoutButton}`}
+                  onClick={() => {
+                    refreshMe();
+                    setIsOpen(false);
+                  }}
+                >
+                  Повторить
+                </button>
+              </li>
+            )}
             {status === "authenticated" && (
               <li>
                 <button

@@ -1,5 +1,4 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL
-  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/+$/, "") : "http://localhost:8080";
+const API_PREFIX = "";
 
 export type ApiError =
   | { kind: "network" } | { kind: "http"; status: number; message: string; fieldErrors?: string[] };
@@ -23,6 +22,14 @@ export interface UserResponse {
   firstName: string;
   lastName: string;
   roles: string[];
+}
+
+type UnauthorizedHandler = () => void;
+
+let onUnauthorized: UnauthorizedHandler | null = null;
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null) {
+  onUnauthorized = handler;
 }
 
 async function parseError(res: Response): Promise<ApiError> {
@@ -58,7 +65,7 @@ async function request<T>(
 
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetch(`${API_PREFIX}${path}`, {
       ...rest,
       headers: finalHeaders,
       cache: "no-store",
@@ -66,6 +73,10 @@ async function request<T>(
   } catch {
     const networkError: ApiError = { kind: "network" };
     throw networkError;
+  }
+
+  if (res.status === 401) {
+    onUnauthorized?.();
   }
 
   if (!res.ok) {

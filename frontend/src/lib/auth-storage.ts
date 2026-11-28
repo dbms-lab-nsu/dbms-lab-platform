@@ -19,6 +19,11 @@ export function readToken(): string | null {
   return token;
 }
 
+export function readExpiresAt(): string | null {
+  if (typeof window === 'undefined') return null;
+  return window.sessionStorage.getItem(EXPIRES_KEY);
+}
+
 export function clearSession() {
   if (typeof window === 'undefined') return;
   window.sessionStorage.removeItem(TOKEN_KEY);

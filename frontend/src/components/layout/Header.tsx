@@ -8,7 +8,7 @@ import styles from "./Header.module.css";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Header() {
-  const { status, user, logout } = useAuth();
+  const { status, user, logout, refreshMe } = useAuth();
 
   return (
     <header className={styles.header}>
@@ -19,7 +19,7 @@ export default function Header() {
               DBMS Lab
             </Link>
           </div>
-
+          
           <div className={styles.desktopNavArea}>
             <Navigation />
           </div>
@@ -39,14 +39,47 @@ export default function Header() {
                   Выйти
                 </button>
               </>
+            ) : status === "error" ? (
+              <div className={styles.authLinks}>
+                {user ? (
+                  <>
+                    <span className={styles.userName} title={user.email}>
+                      {user.firstName} {user.lastName}
+                    </span>
+                    <button
+                      className={styles.logoutBtn}
+                      onClick={() => refreshMe()}
+                      type="button"
+                    >
+                      Повторить
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className={styles.logoutBtn}
+                      onClick={() => refreshMe()}
+                      type="button"
+                    >
+                      Повторить
+                    </button>
+                    <Link href="/login" className={styles.loginLink}>
+                      Вход
+                    </Link>
+                  </>
+                )}
+              </div>
             ) : (
               <div className={styles.authLinks}>
-                <Link href="/login" className={styles.loginLink}>Вход</Link>
-                <Link href="/register" className={styles.registerBtn}>Регистрация</Link>
+                <Link href="/login" className={styles.loginLink}>
+                  Вход
+                </Link>
+                <Link href="/register" className={styles.registerBtn}>
+                  Регистрация
+                </Link>
               </div>
             )}
           </div>
-
           <MobileMenu />
         </div>
       </Container>
