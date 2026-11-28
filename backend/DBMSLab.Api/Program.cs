@@ -72,6 +72,7 @@ builder.Services.AddScoped<IEnrollmentService, EnrollmentService>();
 builder.Services.AddScoped<IProgressService, ProgressService>();
 
 builder.Services.AddScoped<LearningAccessService>();
+builder.Services.AddScoped<DemoDataSeeder>();
 
 builder.Services.AddScoped<ITestRepository, TestRepository>();
 builder.Services.AddScoped<ITestAttemptRepository, TestAttemptRepository>();
@@ -123,6 +124,29 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
 app.UseCors("LocalFrontend");
+
+// Demo data seeding (Development only).
+// Runs after PostgreSQL migrations have been applied, either when
+// SEED_DEMO_DATA=true or when the --seed argument is passed.
+// Does not create test users with fixed passwords — the demo author has
+// no password and is not intended for sign-in.
+if (app.Environment.IsDevelopment())
+{
+    bool isSeedCommand = args.Length > 0 && args[0] == "--seed";
+    bool isSeedEnv = bool.TryParse(builder.Configuration["SEED_DEMO_DATA"], out var seedDemo) && seedDemo;
+
+    if (isSeedCommand || isSeedEnv)
+    {
+        using var scope = app.Services.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<DemoDataSeeder>();
+        await seeder.SeedAsync();
+
+        // When invoked via --seed, exit immediately without starting the HTTP server.
+        if (isSeedCommand)
+            return;
+    }
+}
+
 app.UseAuthentication();
 app.UseAuthorization();
 
