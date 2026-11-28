@@ -43,6 +43,7 @@ services:
       ASPNETCORE_URLS: http://+:8080
       DATABASE_CONNECTION_STRING: ${DATABASE_CONNECTION_STRING:-Host=postgres;Port=5432;Database=dbms_lab;Username=dbms_lab_user;Password=dbms_lab_password}
       Jwt__Key: ${JWT_KEY:?Set JWT_KEY in .env}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
