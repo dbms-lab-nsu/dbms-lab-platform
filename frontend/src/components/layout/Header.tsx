@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import Navigation from './Navigation';
-import MobileMenu from './MobileMenu';
-import Container from '../ui/Container';
-import styles from './Header.module.css';
+import Link from "next/link";
+import Navigation from "./Navigation";
+import MobileMenu from "./MobileMenu";
+import Container from "../ui/Container";
+import styles from "./Header.module.css";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Header() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { status, user, logout, refreshMe } = useAuth();
 
   return (
     <header className={styles.header}>
@@ -19,32 +19,67 @@ export default function Header() {
               DBMS Lab
             </Link>
           </div>
-
+          
           <div className={styles.desktopNavArea}>
             <Navigation />
           </div>
 
           <div className={styles.authArea}>
-            <button 
-              className={styles.demoToggle} 
-              onClick={() => setIsAuthenticated(!isAuthenticated)}
-              title="Переключить состояние авторизации"
-            >
-              {isAuthenticated ? 'Выйти' : 'Войти'}
-            </button>
-
-            {isAuthenticated ? (
-              <Link href="/profile" className={styles.profileLink}>
-                Личный кабинет
-              </Link>
+            {status === "loading" ? (
+              <span className={styles.authSkeleton} aria-hidden />
+            ) : status === "authenticated" && user ? (
+              <>
+                <span className={styles.userName} title={user.email}>
+                  {user.firstName} {user.lastName}
+                </span>
+                <Link href="/profile" className={styles.profileLink}>
+                  Личный кабинет
+                </Link>
+                <button className={styles.logoutBtn} onClick={logout} type="button">
+                  Выйти
+                </button>
+              </>
+            ) : status === "error" ? (
+              <div className={styles.authLinks}>
+                {user ? (
+                  <>
+                    <span className={styles.userName} title={user.email}>
+                      {user.firstName} {user.lastName}
+                    </span>
+                    <button
+                      className={styles.logoutBtn}
+                      onClick={() => refreshMe()}
+                      type="button"
+                    >
+                      Повторить
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className={styles.logoutBtn}
+                      onClick={() => refreshMe()}
+                      type="button"
+                    >
+                      Повторить
+                    </button>
+                    <Link href="/login" className={styles.loginLink}>
+                      Вход
+                    </Link>
+                  </>
+                )}
+              </div>
             ) : (
               <div className={styles.authLinks}>
-                <Link href="/login" className={styles.loginLink}>Вход</Link>
-                <Link href="/register" className={styles.registerBtn}>Регистрация</Link>
+                <Link href="/login" className={styles.loginLink}>
+                  Вход
+                </Link>
+                <Link href="/register" className={styles.registerBtn}>
+                  Регистрация
+                </Link>
               </div>
             )}
           </div>
-
           <MobileMenu />
         </div>
       </Container>
